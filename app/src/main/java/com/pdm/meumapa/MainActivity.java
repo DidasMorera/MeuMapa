@@ -2,6 +2,7 @@ package com.pdm.meumapa;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 //import androidx.core.content.ContextCompat;
@@ -10,11 +11,10 @@ import android.Manifest;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.location.Location;
+import android.location.LocationManager;
 import android.net.Uri;
 import android.os.Bundle;
-import android.os.PersistableBundle;
 import android.provider.Settings;
-import android.view.View;
 import android.widget.Toast;
 
 import com.google.android.gms.common.ConnectionResult;
@@ -23,7 +23,6 @@ import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.maps.CameraUpdate;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
-import com.google.android.gms.maps.MapView;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
@@ -41,6 +40,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     GoogleMap mGoogleMap;
     FloatingActionButton fab;
     private FusedLocationProviderClient mLocationClient;
+    private int GPS_REQUEST_CODE = 9001;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -64,10 +64,34 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     private void initMap() {
         if (isPermissionGranted) {
 
-            SupportMapFragment supportMapFragment = (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.fragment);
-            assert supportMapFragment != null;
-            supportMapFragment.getMapAsync(this);
+            if(isGPSenable()) {
+                SupportMapFragment supportMapFragment = (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.fragment);
+                assert supportMapFragment != null;
+                supportMapFragment.getMapAsync(this);
+            }
         }
+    }
+
+    private boolean isGPSenable(){
+        LocationManager locationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
+        boolean providerEnable = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
+
+        if (providerEnable){
+            return true;
+        }else{
+            AlertDialog alertDialog = new AlertDialog.Builder(this)
+                    .setTitle("GPS permission")
+                    .setMessage("GPS is required for this app, please enable GPS")
+                    .setPositiveButton("Yes", ((dialog, which) ->
+                    {
+                        Intent intent = new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS);
+                        startActivityForResult(intent, GPS_REQUEST_CODE);
+                    }))
+            .setCancelable(false)
+                    .show();
+
+        }
+        return false;
     }
 
     private void getCurrLoc() {
@@ -130,7 +154,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     public void onMapReady(@NonNull GoogleMap googleMap) {
 
         mGoogleMap = googleMap;
-/*
+
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             // TODO: Consider calling
             //    ActivityCompat#requestPermissions
@@ -143,7 +167,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         }
         mGoogleMap.setMyLocationEnabled(true);
 
-        mGoogleMap.getUiSettings().setMyLocationButtonEnabled(true);*/
+        mGoogleMap.getUiSettings().setMyLocationButtonEnabled(true);
     }
 
     @Override
@@ -159,5 +183,23 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     @Override
     public void onConnectionFailed(@NonNull ConnectionResult connectionResult) {
 
+
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+
+        if(requestCode == GPS_REQUEST_CODE){
+            LocationManager locationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
+            boolean providerEnable = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
+
+            if(providerEnable){
+                Toast.makeText(this, "GPS is enable", Toast.LENGTH_SHORT).show();
+
+            }else {
+                Toast.makeText(this, "GPS is not enable", Toast.LENGTH_SHORT).show();
+            }
+        }
     }
 }
